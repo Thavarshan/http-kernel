@@ -386,4 +386,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by Jerome Thayananthajothy for high-performance PHP applications**
 
-> "An idiot admires complexity, a genius admires simplicity" - Terry Davis, Creator of Temple OS
+> "An idiot admires complexity, a genius admires simplicity" - Terry A. Davis, Creator of Temple OS
