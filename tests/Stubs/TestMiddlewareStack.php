@@ -1,0 +1,47 @@
+<?php
+
+namespace Tests\Stubs;
+
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Zip\Http\MiddlewareStackInterface;
+
+/**
+ * Test implementation of MiddlewareStackInterface since we can't mock final classes
+ */
+class TestMiddlewareStack implements MiddlewareStackInterface
+{
+    private RequestHandlerInterface $compiledHandler;
+
+    private int $compileCallCount = 0;
+
+    private bool $compileCalled = false;
+
+    public function __construct(RequestHandlerInterface $compiledHandler)
+    {
+        $this->compiledHandler = $compiledHandler;
+    }
+
+    public function add(string|MiddlewareInterface $middleware): void
+    {
+        // Test implementation - no-op since we're just testing the kernel
+    }
+
+    public function compile(RequestHandlerInterface $handler): RequestHandlerInterface
+    {
+        $this->compileCallCount++;
+        $this->compileCalled = true;
+
+        return $this->compiledHandler;
+    }
+
+    public function wasCompileCalled(): bool
+    {
+        return $this->compileCalled;
+    }
+
+    public function getCompileCallCount(): int
+    {
+        return $this->compileCallCount;
+    }
+}
