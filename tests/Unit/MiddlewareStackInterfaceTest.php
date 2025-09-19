@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace Tests\Unit;
 
+use Atomic\Http\MiddlewareStack;
+use Atomic\Http\MiddlewareStackInterface;
 use PHPUnit\Framework\TestCase;
-use Zip\Http\MiddlewareStack;
-use Zip\Http\MiddlewareStackInterface;
 
 class MiddlewareStackInterfaceTest extends TestCase
 {
@@ -62,14 +62,13 @@ class MiddlewareStackInterfaceTest extends TestCase
 
     public function test_middleware_stack_implements_interface()
     {
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
         $this->assertInstanceOf(MiddlewareStackInterface::class, $stack);
     }
 
     public function test_interface_can_be_implemented()
     {
-        $implementation = new class implements MiddlewareStackInterface
-        {
+        $implementation = new class () implements MiddlewareStackInterface {
             public function add(\Psr\Http\Server\MiddlewareInterface|string $middleware): void
             {
                 // Test implementation

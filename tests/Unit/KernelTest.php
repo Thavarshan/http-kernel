@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace Tests\Unit;
 
+require_once __DIR__ . '/../Stubs/TestMiddlewareStack.php';
+
+use Atomic\Http\Kernel;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Tests\Stubs\TestMiddlewareStack;
-use Zip\Http\Kernel;
 
 class KernelTest extends TestCase
 {

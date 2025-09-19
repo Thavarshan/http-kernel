@@ -26,7 +26,8 @@ class TestMiddleware implements MiddlewareInterface
 
     public function __construct(
         private string $name = 'test'
-    ) {}
+    ) {
+    }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

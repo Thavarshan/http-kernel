@@ -7,10 +7,10 @@ namespace Benchmarks;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zip\Http\CircuitBreakerKernel;
-use Zip\Http\Kernel;
-use Zip\Http\MiddlewareStack;
-use Zip\Http\PerformanceKernel;
+use Atomic\Http\CircuitBreakerKernel;
+use Atomic\Http\Kernel;
+use Atomic\Http\MiddlewareStack;
+use Atomic\Http\PerformanceKernel;
 
 /**
  * Lightweight middleware for benchmarking (doesn't store execution data)

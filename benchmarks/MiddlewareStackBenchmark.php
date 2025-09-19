@@ -8,7 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zip\Http\MiddlewareStack;
+use Atomic\Http\MiddlewareStack;
 
 /**
  * Benchmarks for the MiddlewareStack class

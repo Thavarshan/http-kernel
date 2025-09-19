@@ -2,12 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Zip\Http;
+namespace Atomic\Http;
 
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
+ * Contract for managing and compiling a stack of PSR-15 middleware.
+ *
+ * Implementations should allow adding either concrete middleware instances
+ * or resolvable class strings, and produce an optimized RequestHandlerInterface
+ * that represents the composed pipeline.
+ *
  * @psalm-api
  */
 interface MiddlewareStackInterface

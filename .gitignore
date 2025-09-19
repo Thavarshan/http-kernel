@@ -65,3 +65,11 @@ ehthumbs.db
 # Benchmark results
 /benchmark-results/
 *.benchmark
+
+# Package distribution
+*.tar.gz
+*.zip
+/releases/
+
+# PHP-CS-Fixer cache
+.php-cs-fixer.cache

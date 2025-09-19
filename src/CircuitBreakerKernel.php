@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Zip\Http;
+namespace Atomic\Http;
 
-use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -20,18 +19,24 @@ final class CircuitBreakerKernel implements RequestHandlerInterface
 {
     /**
      * Number of consecutive failures.
+     * Incremented on every thrown exception while the circuit is closed or half-open.
      */
     protected int $failures = 0;
 
     /**
-     * Timestamp of the last failure (microseconds since epoch).
+     * Timestamp of the last failure in seconds since epoch (microtime(true)).
+     * Used to determine when to transition from open -> half_open for a probe.
      */
     protected ?float $lastFailureTime = null;
 
     /**
-     * Whether the circuit is currently open (blocking requests).
+     * Circuit state: 'closed' | 'open' | 'half_open'.
+     *
+     * - closed: normal operation
+     * - open: reject immediately until timeout elapses
+     * - half_open: allow a probe; success closes, failure re-opens
      */
-    protected bool $isOpen = false;
+    protected string $state = 'closed';
 
     /**
      * Constructs the CircuitBreakerKernel with a kernel and configuration.
@@ -55,27 +60,50 @@ final class CircuitBreakerKernel implements RequestHandlerInterface
      * @param  ServerRequestInterface  $request  The incoming request
      * @return ResponseInterface The response from the kernel
      *
-     * @throws \RuntimeException If the circuit breaker is open
+     * @throws \RuntimeException If the circuit breaker is open (HTTP 503 semantics)
      * @throws \Throwable If the underlying kernel throws an exception
      */
-    #[Override]
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        // Block request if circuit is open
-        if ($this->isCircuitOpen()) {
+        // Block request if circuit is open (unless transitioning to half-open)
+        if ($this->isCircuitBlocking()) {
             throw new \RuntimeException('Circuit breaker is open', 503);
         }
 
         try {
-            // Try to handle the request
             $response = $this->kernel->handle($request);
-            $this->onSuccess(); // Reset failure count on success
+            $this->onSuccess();
 
             return $response;
         } catch (\Throwable $e) {
-            $this->onFailure(); // Increment failure count on error
+            $this->onFailure();
             throw $e;
         }
+    }
+
+    /**
+     * Expose current circuit state for observability: 'closed' | 'open' | 'half_open'.
+     */
+    public function getState(): string
+    {
+        return $this->state;
+    }
+
+    /**
+     * Expose current consecutive failure count.
+     */
+    public function getFailureCount(): int
+    {
+        return $this->failures;
+    }
+
+    /**
+     * Expose timestamp of the last failure in seconds since epoch, if any.
+     */
+    public function getLastFailureTime(): ?float
+    {
+        return $this->lastFailureTime;
     }
 
     /**
@@ -84,19 +112,28 @@ final class CircuitBreakerKernel implements RequestHandlerInterface
      *
      * @return bool True if circuit is open, false otherwise
      */
-    protected function isCircuitOpen(): bool
+    /**
+     * Determine whether the circuit should block the incoming request.
+     *
+     * - If state is open and timeout not elapsed: block.
+     * - If state is open and timeout elapsed: move to half_open and allow a probe.
+     * - Otherwise: do not block.
+     */
+    protected function isCircuitBlocking(): bool
     {
-        if (! $this->isOpen) {
-            return false;
+        if ($this->state === 'open') {
+            // If enough time has passed, move to half-open to allow a probe
+            if ($this->lastFailureTime !== null && (microtime(true) - $this->lastFailureTime) > $this->recoveryTimeout) {
+                $this->state = 'half_open';
+                // allow request to pass through as a probe
+                return false;
+            }
+
+            return true; // still open, block
         }
 
-        // If enough time has passed, close the circuit and reset failures
-        if (microtime(true) - $this->lastFailureTime > $this->recoveryTimeout) {
-            $this->isOpen = false;
-            $this->failures = 0;
-        }
-
-        return $this->isOpen;
+        // In half-open or closed, do not block
+        return false;
     }
 
     /**
@@ -105,7 +142,8 @@ final class CircuitBreakerKernel implements RequestHandlerInterface
     protected function onSuccess(): void
     {
         $this->failures = 0;
-        $this->isOpen = false;
+        // Success during half-open closes the circuit fully
+        $this->state = 'closed';
     }
 
     /**
@@ -116,9 +154,15 @@ final class CircuitBreakerKernel implements RequestHandlerInterface
         $this->failures++;
         $this->lastFailureTime = microtime(true);
 
-        // Open circuit if failure threshold reached
-        if ($this->failures >= $this->failureThreshold) {
-            $this->isOpen = true;
+        if ($this->state === 'half_open') {
+            // Probe failed, immediately re-open
+            $this->state = 'open';
+            return;
+        }
+
+        // In closed state: open when threshold reached
+        if ($this->state === 'closed' && $this->failures >= $this->failureThreshold) {
+            $this->state = 'open';
         }
     }
 }

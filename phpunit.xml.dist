@@ -8,7 +8,7 @@
     xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
     cacheDirectory=".phpunit.cache">
     <testsuites>
-        <testsuite name="Zip Test Suite">
+        <testsuite name="Atomic Test Suite">
             <directory>./tests</directory>
         </testsuite>
     </testsuites>
@@ -17,7 +17,7 @@
     </php>
     <source>
         <include>
-            <directory>src/Zip</directory>
+            <directory>src</directory>
         </include>
     </source>
 </phpunit>

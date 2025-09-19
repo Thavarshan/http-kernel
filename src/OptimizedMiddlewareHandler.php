@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Zip\Http;
+namespace Atomic\Http;
 
-use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -36,8 +35,10 @@ final readonly class OptimizedMiddlewareHandler implements RequestHandlerInterfa
      *
      * @param  ServerRequestInterface  $request  The incoming request
      * @return ResponseInterface The response from the middleware
+     *
+     * Equivalent to: return $middleware->process($request, $next);
      */
-    #[Override]
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         // Directly call the middleware's process method with the next handler

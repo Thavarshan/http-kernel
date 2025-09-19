@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Zip\Http;
+namespace Atomic\Http;
 
-use Override;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -26,16 +25,19 @@ final class MiddlewareStack implements MiddlewareStackInterface
     protected array $middleware = [];
 
     /**
-     * Cache of resolved middleware instances by class name.
+     * Cache of resolved middleware instances by identifier (typically class name).
+     * Avoids repeated container lookups and constructions during compilation.
      *
      * @var array<string, MiddlewareInterface>
      */
     protected array $instanceCache = [];
 
     /**
-     * Cached compiled middleware pipeline.
+     * Cached compiled middleware pipelines per final handler.
+     *
+     * @var array<int, RequestHandlerInterface> keyed by spl_object_id($handler)
      */
-    protected ?RequestHandlerInterface $compiledPipeline = null;
+    protected array $compiledPipelines = [];
 
     /**
      * Constructs the MiddlewareStack with an optional container for resolving middleware.
@@ -53,12 +55,12 @@ final class MiddlewareStack implements MiddlewareStackInterface
      *
      * @param  MiddlewareInterface|string  $middleware  The middleware instance or class name
      */
-    #[Override]
+    #[\Override]
     public function add(MiddlewareInterface|string $middleware): void
     {
         $this->middleware[] = $middleware;
-        // Invalidate the compiled pipeline cache when middleware changes
-        $this->compiledPipeline = null;
+        // Invalidate all compiled pipelines when middleware composition changes
+        $this->compiledPipelines = [];
     }
 
     /**
@@ -68,16 +70,17 @@ final class MiddlewareStack implements MiddlewareStackInterface
      * @param  RequestHandlerInterface  $handler  The final handler
      * @return RequestHandlerInterface The compiled pipeline
      */
-    #[Override]
+    #[\Override]
     public function compile(RequestHandlerInterface $handler): RequestHandlerInterface
     {
-        // Return cached pipeline if already compiled
-        if ($this->compiledPipeline !== null) {
-            return $this->compiledPipeline;
+        // Return cached pipeline for this handler if already compiled
+        $key = \spl_object_id($handler);
+        if (isset($this->compiledPipelines[$key])) {
+            return $this->compiledPipelines[$key];
         }
-        // If no middleware, return the handler directly
+        // If no middleware, cache and return the handler directly
         if (empty($this->middleware)) {
-            return $this->compiledPipeline = $handler;
+            return $this->compiledPipelines[$key] = $handler;
         }
         // Resolve all middleware instances in reverse order (outermost first)
         $resolvedMiddleware = [];
@@ -91,7 +94,16 @@ final class MiddlewareStack implements MiddlewareStackInterface
         }
 
         // Cache and return the compiled pipeline
-        return $this->compiledPipeline = $pipeline;
+        return $this->compiledPipelines[$key] = $pipeline;
+    }
+
+    /**
+     * Clear all compiled pipelines. Use when changing the final handler topology at runtime.
+     * Does not clear the middleware instance cache.
+     */
+    public function clearCompiledPipelines(): void
+    {
+        $this->compiledPipelines = [];
     }
 
     /**
@@ -101,20 +113,50 @@ final class MiddlewareStack implements MiddlewareStackInterface
      * @param  MiddlewareInterface|string  $middleware  The middleware instance or class name
      * @return MiddlewareInterface The resolved middleware instance
      */
+    /**
+     * Resolve a middleware specification to a concrete MiddlewareInterface instance.
+     *
+     * @param  MiddlewareInterface|string  $middleware  Instance or class-string to resolve
+     * @return MiddlewareInterface
+     *
+     * @throws \InvalidArgumentException If the value cannot be resolved to MiddlewareInterface
+     */
     protected function resolveMiddleware(MiddlewareInterface|string $middleware): MiddlewareInterface
     {
         // If already an instance, return it
         if ($middleware instanceof MiddlewareInterface) {
             return $middleware;
         }
+        // By this point, $middleware must be a class-string
+        $class = $middleware; // narrow to string for static analysis
+
         // Return cached instance if available
-        if (isset($this->instanceCache[$middleware])) {
-            return $this->instanceCache[$middleware];
+        if (isset($this->instanceCache[$class])) {
+            return $this->instanceCache[$class];
         }
+
         // Resolve via container or instantiate directly
-        $instance = $this->container?->get($middleware) ?? new $middleware();
+        if ($this->container !== null) {
+            // Defer to container resolution; implementations typically throw on unknown id
+            $instance = $this->container->get($class);
+        } else {
+            if (! \class_exists($class)) {
+                throw new \InvalidArgumentException(sprintf('Middleware class "%s" not found', $class));
+            }
+            $instance = new $class();
+        }
+
+        if (! $instance instanceof MiddlewareInterface) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Middleware "%s" must resolve to an instance of %s',
+                    $class,
+                    MiddlewareInterface::class
+                )
+            );
+        }
 
         // Cache and return
-        return $this->instanceCache[$middleware] = $instance;
+        return $this->instanceCache[$class] = $instance;
     }
 }

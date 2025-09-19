@@ -1,26 +1,38 @@
 {
-    "name": "zip/http-kernel",
+    "name": "atomic/http-kernel",
     "description": "Lightning-fast, ultra-slim PHP HTTP kernel with zero bloat and maximum performance",
     "type": "library",
+    "homepage": "https://github.com/atomic/http-kernel",
+    "readme": "README.md",
+    "license": "MIT",
     "authors": [
         {
-            "name": "Jerome Thayananthajothy",
-            "email": "tjthavarshan@gmail.com"
+            "name": "Thavarshan",
+            "email": "tjthavarshan@gmail.com",
+            "role": "Author"
         }
     ],
+    "support": {
+        "issues": "https://github.com/atomic/http-kernel/issues",
+        "source": "https://github.com/atomic/http-kernel"
+    },
     "keywords": [
         "http",
         "kernel",
         "middleware",
         "psr-7",
         "psr-15",
+        "psr-11",
         "performance",
-        "php"
+        "php",
+        "fast",
+        "zero-overhead",
+        "compile-time",
+        "optimization"
     ],
-    "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Zip\\Http\\": "src/"
+            "Atomic\\Http\\": "src/"
         }
     },
     "autoload-dev": {
@@ -30,7 +42,7 @@
         }
     },
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "psr/http-message": "^1.0|^2.0",
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0",
@@ -46,12 +58,18 @@
     },
     "scripts": {
         "test": "phpunit",
+        "test-coverage": "php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-clover=coverage.xml",
         "psalm": "psalm",
-        "cs-check": "php-cs-fixer fix --dry-run --diff ./src",
-        "cs-fix": "php-cs-fixer fix ./src",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
         "benchmark": "php benchmarks/run-benchmarks.php",
         "benchmark-kernel": "php benchmarks/run-benchmarks.php --filter=Kernel",
         "benchmark-middleware": "php benchmarks/run-benchmarks.php --filter=Middleware",
+        "qa": [
+            "@psalm",
+            "@cs-check",
+            "@test"
+        ],
         "analyze": [
             "@psalm",
             "@cs-check"

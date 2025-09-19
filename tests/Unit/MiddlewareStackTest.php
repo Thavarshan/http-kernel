@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace Tests\Unit;
 
+require_once __DIR__ . '/../Stubs/TestMiddleware.php';
+
+use Atomic\Http\MiddlewareStack;
+use Atomic\Http\MiddlewareStackInterface;
+use Atomic\Http\OptimizedMiddlewareHandler;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -11,22 +16,19 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Tests\Stubs\TestMiddleware;
-use Zip\Http\MiddlewareStack;
-use Zip\Http\MiddlewareStackInterface;
-use Zip\Http\OptimizedMiddlewareHandler;
 
 class MiddlewareStackTest extends TestCase
 {
     public function test_implements_middleware_stack_interface()
     {
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
         $this->assertInstanceOf(MiddlewareStackInterface::class, $stack);
     }
 
     public function test_compile_with_empty_stack_returns_original_handler()
     {
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
 
         $result = $stack->compile($handler);
 
@@ -36,7 +38,7 @@ class MiddlewareStackTest extends TestCase
     public function test_compile_caches_pipeline()
     {
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
 
         $result1 = $stack->compile($handler);
         $result2 = $stack->compile($handler);
@@ -44,11 +46,41 @@ class MiddlewareStackTest extends TestCase
         $this->assertSame($result1, $result2);
     }
 
+    public function test_compile_caches_per_handler()
+    {
+        $request = $this->createMock(ServerRequestInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
+
+        $handler1 = $this->createMock(RequestHandlerInterface::class);
+        $handler1->method('handle')->willReturn($response);
+        $handler2 = $this->createMock(RequestHandlerInterface::class);
+        $handler2->method('handle')->willReturn($response);
+
+        $stack = new MiddlewareStack();
+        $stack->add(new TestMiddleware('m1'));
+
+        $compiled1a = $stack->compile($handler1);
+        $compiled2a = $stack->compile($handler2);
+
+        $this->assertNotSame($compiled1a, $compiled2a, 'Different handlers should yield distinct compiled pipelines');
+
+        // Subsequent calls should return the same cached instances per handler
+        $compiled1b = $stack->compile($handler1);
+        $compiled2b = $stack->compile($handler2);
+
+        $this->assertSame($compiled1a, $compiled1b);
+        $this->assertSame($compiled2a, $compiled2b);
+
+        // Pipelines should function
+        $this->assertInstanceOf(ResponseInterface::class, $compiled1a->handle($request));
+        $this->assertInstanceOf(ResponseInterface::class, $compiled2a->handle($request));
+    }
+
     public function test_add_invalidates_compiled_pipeline_cache()
     {
         $handler = $this->createMock(RequestHandlerInterface::class);
         $middleware = $this->createMock(MiddlewareInterface::class);
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
 
         // First compilation
         $result1 = $stack->compile($handler);
@@ -74,7 +106,7 @@ class MiddlewareStackTest extends TestCase
             ->with($request, $this->isInstanceOf(RequestHandlerInterface::class))
             ->willReturn($response);
 
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
         $stack->add($middleware);
 
         $compiledPipeline = $stack->compile($handler);
@@ -94,7 +126,7 @@ class MiddlewareStackTest extends TestCase
         $middleware1 = new TestMiddleware('middleware1');
         $middleware2 = new TestMiddleware('middleware2');
 
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
         $stack->add($middleware1);
         $stack->add($middleware2);
 
@@ -109,7 +141,7 @@ class MiddlewareStackTest extends TestCase
     public function test_compile_with_middleware_class_names_without_container()
     {
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
 
         $stack->add(TestMiddleware::class);
 
@@ -163,7 +195,7 @@ class MiddlewareStackTest extends TestCase
         $handler = $this->createMock(RequestHandlerInterface::class);
         $middlewareInstance = $this->createMock(MiddlewareInterface::class);
 
-        $stack = new MiddlewareStack;
+        $stack = new MiddlewareStack();
         $stack->add($middlewareInstance);
         $stack->add(TestMiddleware::class);
 

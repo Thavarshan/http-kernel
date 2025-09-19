@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.3']
+        php-version: ['8.4']
 
     steps:
     - uses: actions/checkout@v4
@@ -39,8 +39,8 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    - name: Run tests
-      run: composer test
+    - name: Run tests with coverage
+      run: composer test-coverage
 
     - name: Run static analysis
       run: composer psalm
@@ -49,5 +49,7 @@ jobs:
       run: composer cs-check
 
     - name: Upload coverage
-      if: matrix.php-version == '8.3'
+      if: matrix.php-version == '8.4' && hashFiles('coverage.xml') != ''
       uses: codecov/codecov-action@v3
+      with:
+        files: coverage.xml

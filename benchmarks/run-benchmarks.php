@@ -11,7 +11,7 @@ use Benchmarks\MiddlewareStackBenchmark;
 /**
  * Main benchmark runner script
  */
-echo "🚀 Zip HTTP Kernel Benchmarks\n";
+echo "🚀 Atomic HTTP Kernel Benchmarks\n";
 echo "============================\n\n";
 
 $runner = new BenchmarkRunner;

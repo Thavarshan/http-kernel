@@ -2,9 +2,9 @@
 
 namespace Tests\Stubs;
 
+use Atomic\Http\MiddlewareStackInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zip\Http\MiddlewareStackInterface;
 
 /**
  * Test implementation of MiddlewareStackInterface since we can't mock final classes
